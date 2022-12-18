@@ -1,0 +1,118 @@
+version: "3.9"
+services:
+  # microservices
+  server1:
+    image: pract9_1
+    build:
+      context: .
+      dockerfile: ./server1/Dockerfile
+    depends_on:
+      - postgres-server
+    ports:
+      - "8081:8080"
+    healthcheck:
+      test: curl --fail http://localhost:8080/health || exit 1
+      interval: 60s
+      retries: 5
+      start_period: 20s
+      timeout: 10s
+  server2:
+    image: pract9_2
+    build:
+      context: .
+      dockerfile: ./server2/Dockerfile
+    ports:
+      - "8082:8080"
+    healthcheck:
+      test: curl --fail http://localhost:8080/health || exit 1
+      interval: 60s
+      retries: 5
+      start_period: 20s
+      timeout: 10s
+  # proxy
+  krakend:
+    image: devopsfaith/krakend:latest
+    depends_on:
+      - server1
+      - server2
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./docker/kraken:/etc/krakend:ro
+
+  # db
+  postgres-server:
+    image: postgres:latest
+    #restart: always
+    volumes:
+      - ./docker/psql_data:/var/lib/postgresql/data:rw
+    environment:
+      - POSTGRES_PASSWORD=micropass
+      - POSTGRES_USER=microuser
+      - POSTGRES_DB=microdb
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # tracing, monitoring
+  jaeger:
+    image: jaegertracing/all-in-one:1.40
+    ports:
+      - "16686:16686"
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - "./docker/grafana/datasources.yml:/etc/grafana/provisioning/datasources/all.yml"
+      - "./docker/grafana/dashboards.yml:/etc/grafana/provisioning/dashboards/all.yml"
+      - "./docker/grafana/krakend:/var/lib/grafana/dashboards/krakend"
+  influxdb:
+    image: influxdb:1.8.10
+    environment:
+      - INFLUXDB_DB=krakend
+      - INFLUXDB_USER=krakend
+      - INFLUXDB_USER_PASSWORD=krakend
+      - INFLUXDB_ADMIN_USER=admin
+      - INFLUXDB_ADMIN_PASSWORD=supersecretpassword
+
+  # auth
+  keycloak-db:
+    image: postgres:latest
+    container_name: keycloak-db
+    user: root
+    ports:
+      - "5437:5432"
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: password
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:15.0.2
+    container_name: keycloak
+    depends_on:
+      - keycloak-db
+    ports:
+      - "8079:8080"
+    ulimits:
+      nofile:
+        soft: 20000
+        hard: 40000
+    environment:
+      DB_VENDOR: POSTGRES
+      DB_ADDR: keycloak-db
+      DB_PORT: 5432
+      DB_DATABASE: keycloak
+      DB_USER: keycloak
+      DB_PASSWORD: password
+      KEYCLOAK_USER: admin
+      KEYCLOAK_PASSWORD: admin

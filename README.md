@@ -1,0 +1,1 @@
+2 контейнера с spring boot и 1 с krakend
