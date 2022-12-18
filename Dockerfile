@@ -1,6 +1,6 @@
 FROM gradle:7.1.1-jdk16-hotspot AS build
 WORKDIR /app
-COPY ./ .
+COPY server1 .
 RUN chmod +x ./gradlew
 RUN gradle :server1:bootJar
 
