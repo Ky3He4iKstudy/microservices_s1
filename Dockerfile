@@ -1,7 +1,8 @@
 FROM gradle:7.1.1-jdk16-hotspot AS build
 WORKDIR /app
-COPY server1 .
+COPY . .
 RUN chmod +x ./gradlew
+RUN gradle :server1:test
 RUN gradle :server1:bootJar
 
 FROM openjdk:15-jdk-alpine

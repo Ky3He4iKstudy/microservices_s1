@@ -18,6 +18,7 @@ dependencies {
     runtimeOnly("com.h2database:h2")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.junit.vintage:junit-vintage-engine")
 }
 tasks.withType<Jar> {
     manifest {
@@ -25,3 +26,6 @@ tasks.withType<Jar> {
     }
 }
 
+tasks.register<Jar>("packageTests") {
+    from(sourceSets.test.get().output)
+}
