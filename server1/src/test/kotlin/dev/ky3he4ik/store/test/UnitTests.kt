@@ -26,7 +26,7 @@ class UnitTests {
 
     @Test
     fun smoke() {
-        Assert.assertEquals("{\"storage\": \"ok\"}", testController.health())
+        Assert.assertEquals("{\"non storage\": \"fail\"}", testController.health())
     }
 
     @Test
